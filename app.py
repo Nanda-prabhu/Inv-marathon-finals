@@ -1,14 +1,14 @@
 import os
+import re
 from datetime import datetime
 
-import pymongo as mongo
-from flask import Flask, make_response, redirect, render_template, request
-from werkzeug.utils import secure_filename
-
 import cv2
+import pandas as pd
+import pymongo as mongo
 import pytesseract
-import re
+from flask import Flask, make_response, redirect, render_template, request
 from pytesseract import Output
+from werkzeug.utils import secure_filename
 
 # from flask_cors import CORS
 
@@ -83,10 +83,14 @@ def create_event():
             event_date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
             event_time = datetime.strptime(request.form.get("time"), "%H:%M")
             event_venue = request.form.get("venue")
+            try:
+                event_id = int(list(events_collection.find({}))[-1]["event_id"]) + 1
+            except:
+                event_id = 1
             events_collection = db["events"]
             events_collection.insert_one(
                 {
-                    "event_id": int(list(events_collection.find({}))[-1]["event_id"]) + 1,
+                    "event_id": event_id,
                     "poster": event_name + "." + poster.filename.split(".")[-1],
                     "name": event_name,
                     "date": event_date,
@@ -102,25 +106,76 @@ def create_event():
 
 @app.route("/view-events", methods=["GET"])
 def view_evevnt():
+    role = request.cookies.get("role")
     events_collection = db["events"]
     events_collection_list = [event for event in events_collection.find({})]
-    print(events_collection_list[-1])
-    return render_template("view_events.html", events=events_collection_list)
+    return render_template("view_events.html", events=events_collection_list, role=role)
 
-# @app.route("edit-event", methods=["GET", "POST"])
-# def edit_event():
-#     # use create event page with prefilled values
+@app.route("/edit-event", methods=["GET", "POST"])
+def edit_event():
+    role = request.cookies.get("role")
+    if role == "admin":
+        event_id = int(request.args.get("event_id"))
+        events_collection = db["events"]
+        event = events_collection.find_one(
+            {
+                "event_id": event_id
+            }
+        )
+        if event:
+            if request.method == "POST":
+                poster = request.files.get("poster")
+                event_name = request.form.get("name")
+                poster_file_path = os.path.join(poster_directory, secure_filename(event_name + "." + poster.filename.split(".")[-1]))
+                poster.save(os.path.join("static", "images", event_name + "." + poster.filename.split(".")[-1]))
+                try:
+                    print(f"--> OCR output: {ocr_from_image(poster_file_path)}")
+                except:
+                    print("--> OCR failed")
+                event_date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+                event_time = datetime.strptime(request.form.get("time"), "%H:%M")
+                event_venue = request.form.get("venue")
+                events_collection.update_one(
+                    {
+                        "event_id": event_id
+                    },
+                    {
+                        "$set": {
+                            "event_id": int(list(events_collection.find({}))[-1]["event_id"]) + 1,
+                            "poster": event_name + "." + poster.filename.split(".")[-1],
+                            "name": event_name,
+                            "date": event_date,
+                            "time": event_time,
+                            "venue": event_venue
+                        }
+                    }
+                )
+                return redirect("/view-events")
+            return render_template("edit_event.html", event=event)
+        else:
+            return "404 Event id not found <a href='/view-events'>view-events</a>"
+    else:
+        return render_template("access_denied.html")
 
-
-# @app.route("/delete-event", methods=["POST"])
-# def delete_event():
-#     return True
-# use url query to select by event id
+@app.route("/delete-event", methods=["GET", "POST"])
+def delete_event():
+    role = request.cookies.get("role")
+    if role == "admin":
+        event_id = int(request.args.get("event_id"))
+        events_collection = db["events"]
+        events_collection.delete_one(
+            {
+                "event_id": event_id
+            }
+        )
+        return redirect("/view-events")
+    else:
+        return render_template("access_denied.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     role = request.cookies.get("role")
-    event_name = request.args.get("event_name")
+    event_id = int(request.args.get("event_id"))
     if role == "student":
         if request.method == "POST":
             regno = request.form.get("regno")
@@ -140,9 +195,17 @@ def register():
                 "phone": phone
             }
             events_collection = db["events"]
+            registrations = events_collection.find_one(
+                {
+                    "event_id": event_id
+                }
+            )["registrations"]
+            for registration in registrations:
+                if registration["regno"] == regno:
+                    return "<h1>Already registered <a href='/view-events'>view-events</a></h1>"
             events_collection.update_one(
                 {
-                    "name": event_name
+                    "event_id": event_id
                 },
                 {
                     "$push": {
@@ -150,12 +213,35 @@ def register():
                     }
                 }
             )
-            return "Success"
-        return render_template("register.html", event_name=event_name)
+            return "Success <a href='/view-events'>view-events</a>"
+        return render_template("register.html", event_id=event_id)
     else:
         return render_template("access_denied.html")
 
-# @app.route("/export")
+@app.route("/export", methods=["GET"])
+def export():
+    role = request.cookies.get("role")
+    if role == "admin":
+        event_id = int(request.args.get("event_id"))
+        events_collection = db["events"]
+        event = events_collection.find_one(
+            {
+                "event_id": event_id
+            }
+        )
+        event_name = event["name"]
+        registrations = event["registrations"]
+        df = pd.DataFrame(registrations)
+        df.to_excel(f"static/exports/{event_id}_{event_name}.xlsx", index=False)
+        return f"Exported <a href='static/exports/{event_id}_{event_name}.xlsx' download='static/exports/{event_id}_{event_name}.xlsx'>Click to download</a>"
+    else:
+        return render_template("access_denied.html")
+
+@app.route("/logout", methods=["GET"])
+def logout():
+    resp = make_response(redirect("/"))
+    resp.set_cookie("role", "", expires=0)
+    return resp
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

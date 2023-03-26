@@ -32,7 +32,7 @@
             <a class="nav-link" href="#">Contact</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Logout</a> 
+            <a class="nav-link" href="/logout">Logout</a>  
           </li>
         </ul>
       </div>
@@ -45,6 +45,10 @@
     <div class="all-events-div">
         <h1>Events :</h1>
 
+        {% if events|length < 1 %}
+          <h3>No events, Come back later</h3>
+        {% endif %}
+
         {% for event in events %}
         <div class="card">
             <img src="/static/images/{{ event['poster'] }}" alt="poster-img">
@@ -55,10 +59,21 @@
             <p><b>Date</b> : {{ date.strftime('%d-%m-%Y') }}</p>
             <p><b>Time</b> : {{ time.strftime('%H:%M') }}</p>
             <p><b>Venue</b> : {{ event['venue'] }}</p>
-            <button class="bruv-btn">Edit</button>
-            <a href="/register?event_name={{ event['name'] }}">
-              <button style="margin: 1rem 0;" class="btn btn-primary">Register</button>
-            </a>
+            {% if role == "admin" %}
+              <a href="/export?event_id={{ event['event_id'] }}">
+                <button style="margin: 1rem 0 0 0;" class="btn btn-primary">Export</button>
+              </a>
+              <a href="/edit-event?event_id={{ event['event_id'] }}">
+                <button style="margin: 1rem 0 0 0;" class="btn btn-primary">Edit</button>
+              </a>
+              <a href="/delete-event?event_id={{ event['event_id'] }}">
+                <button style="margin: 1rem 0 0 0;" class="btn btn-primary" onclick="return confirm('Delete panirta?')">Delete</button>
+              </a>
+            {% else %}
+              <a href="/register?event_id={{ event['event_id'] }}">
+                <button style="margin: 1rem 0;" class="btn btn-primary">Register</button>
+              </a>
+            {% endif %}
         </div>
         {% endfor %}
 

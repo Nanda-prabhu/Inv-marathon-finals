@@ -43,11 +43,18 @@
 
   <section class="access-denied">
     <div class="access-denied-div">
-        <h1>Access Denied!</h1>
-        <p>Wrong role</p>
-        <p>Please go back to the previous page</p>
-        <button class="bruv-btn" onclick="history.back()">Go Back</button>
-    </div>
+        <h1>{{ message['title'] }}</h1>
+        <p>{{ message['body'] }}</p>
+        {% if message['file'] %}
+          <a href="{{ message['file'] }}" download="{{ message['file'] }}" style="margin-bottom: 10px;">
+            <button class="bruv-btn">Click to download</button>
+          </a>
+          <br><br>
+        {% endif %}
+        <a href="/view-events">
+          <button class="bruv-btn">View events</button>
+        </a>
+      </div>
   </section>
 
   

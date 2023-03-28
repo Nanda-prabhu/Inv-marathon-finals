@@ -50,6 +50,7 @@
             <input class="form-control rounded-left" type="date" value="{{ event['date'].strftime('%Y-%m-%d') }}" name="date">
             <input class="form-control rounded-left" type="time" value="{{ event['time'].strftime('%H:%M') }}" name="time">
             <input class="form-control rounded-left" type="text" value="{{ event['venue'] }}" placeholder="venue" name="venue">
+            <input class="form-control rounded-left" type="number" value="{{ event['limit'] }}" name="limit">
             <br>
             <input type="submit" value="Edit event">
         </form>

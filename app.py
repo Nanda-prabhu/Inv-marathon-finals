@@ -10,6 +10,7 @@ import cv2
 import pandas as pd
 import pymongo as mongo
 import pytesseract
+from dateparser import parse
 from flask import Flask, make_response, redirect, render_template, request
 from pytesseract import Output
 from werkzeug.utils import secure_filename
@@ -23,24 +24,46 @@ client = mongo.MongoClient(url)
 db = client["404-found"]
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-date_extract_pattern = "[0-9]{1,2}\-[0-9]{1,2}\-[0-9]{4}"
 
 poster_directory = "posters"
 
 def ocr_from_image(imgsrc):
-    img = cv2.imread(imgsrc)
-    d = pytesseract.image_to_data(img, output_type=Output.DICT)
-    lis = d['text']
-    string = " ".join(lis)
-    result = re.findall(date_extract_pattern, string)
-    n = lis.index('VENUE')+2
-    venue = ""
-    y = []
-    for i in range(3):
-        if(lis[n] != " "):
-            y.append(lis[n])
-            n += 1
-    return [" ".join(y), result[0]]
+    try:
+        img = cv2.imread(imgsrc)
+        d = pytesseract.image_to_data(img, output_type=Output.DICT)
+        lis = d['text']
+        string = " ".join(lis)
+        regexes = [
+            r"((19|20)?\d{1,2}\s?[-/]\s?\d{1,2}\s?[-/]\s?(19|20)?\d{2})|"\
+            r"((Jan|Feb|Mar|Apr|May|Jun|June|Jul|Aug|Sept|Sep|Oct|Nov|Dec)"\
+            r"\s?\d{1,2}\s?[,']?\s?(19|20)?\d{2})|(\d{1,2}\s?[-/]?\s?"\
+            r"(Jan|Feb|Mar|Apr|May|Jun|June|Jul|Aug|Sept|Sep|Oct|Nov|Dec)"\
+            r"\s?[',-/]?\s?(19|20)?\d{1,2})",
+
+            r"\b(0?[1-9]|[12]\d|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{4}\b", # dd Mon yyyy
+            r"\b(0?[1-9]|[12]\d|3[01]) (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s\d{4}\b", # dd mon yyyy
+
+            r"\b(0?[1-9]|[12]\d|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{2}\b", # dd Mon yy
+            r"\b(0?[1-9]|[12]\d|3[01]) (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s\d{2}\b", # dd mon yy
+
+            r"\b(0?[1-9]|[12]\d|3[01]) (January|February|March|April|May|June|July|Augest|September|October|November|December),\d{2}\b", # dd Month,yy
+            r"\b(0?[1-9]|[12]\d|3[01]) (january|february|march|april|may|june|july|augest|september|october|november|december),\d{2}\b", # dd month,yy
+
+            r"\b(0?[1-9]|[12]\d|3[01]) (January|February|March|April|May|June|July|Augest|September|October|November|December),\d{4}\b", # dd Month,yyyy
+            r"\b(0?[1-9]|[12]\d|3[01]) (january|february|march|april|may|june|july|augest|september|october|november|december),\d{4}\b", # dd month,yyyy
+            
+            r"\b(January|February|March|April|May|June|July|Augest|September|October|November|December)\s(0?[1-9]|[12]\d|3[01]),\s\d{4}\b", # Month dd, yyyy
+            r"\b(january|february|march|april|may|june|july|augest|september|october|november|december)\s(0?[1-9]|[12]\d|3[01]),\s\d{4}\b", # month dd, yyyy
+        ]
+        matches = []
+        for regex in regexes:
+            match = re.findall(regex, string)
+            matches.append(match)
+        if len(matches) == 0:
+            return False, None
+        return True, parse(matches[0][0][0])
+    except IndexError:
+        return False, None
 
 def mail_otp(name, to_gmail, event):
     message = MIMEMultipart()
@@ -101,13 +124,13 @@ def index():
         message = "Login failed"
     return render_template("login.html", message=message)
 
-# @app.route("/about", methods=["GET"])
-# def about():
-#     return render_template("about.html")
+@app.route("/about", methods=["GET"])
+def about():
+    return render_template("about.html")
 
-# @app.route("/contact", methods=["GET"])
-# def contact():
-#     return render_template("contact.html")
+@app.route("/contact", methods=["GET"])
+def contact():
+    return render_template("contact.html")
 
 @app.route("/create-event", methods=["GET", "POST"])
 def create_event():
@@ -116,17 +139,12 @@ def create_event():
         if request.method == "POST":
             poster = request.files.get("poster")
             event_name = request.form.get("name")
-            poster_file_path = os.path.join(poster_directory, secure_filename(event_name + "." + poster.filename.split(".")[-1]))
-            poster.save(os.path.join("static", "images", event_name + "." + poster.filename.split(".")[-1]))
-            try:
-                print(f"--> OCR output: {ocr_from_image(poster_file_path)}")
-            except:
-                print("--> OCR failed")
-            event_date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
-            event_time = datetime.strptime(request.form.get("time"), "%H:%M")
+            poster_file_path = os.path.join("static", "images", event_name + "." + poster.filename.split(".")[-1])
+            poster.save(poster_file_path)
             event_venue = request.form.get("venue")
             registration_limit = int(request.form.get("limit"))
             events_collection = db["events"]
+            ocr_status, event_date = ocr_from_image(poster_file_path)
             try:
                 event_id = int(list(events_collection.find({}))[-1]["event_id"]) + 1
             except Exception as e:
@@ -137,21 +155,25 @@ def create_event():
                     "poster": event_name + "." + poster.filename.split(".")[-1],
                     "name": event_name,
                     "date": event_date,
-                    "time": event_time,
                     "venue": event_venue,
                     "limit": registration_limit,
                     "registered": 0,
                     "registrations": []
                 }
             )
+            if ocr_status == False:
+                return redirect(f"/edit-event?event_id={event_id}")
             message = {
+                "color": "green-text",
                 "title": "Success",
-                "body": "You have successfully created a new event"
+                "body": f"OCR detected date: {event_date.strftime('%d-%m-%Y')}",
+                "edit_event": event_id
             }
             return render_template("information.html", message=message)
         return render_template("create_event.html")
     else:
         message = {
+            "color": "red",
             "title": "Access denied",
             "body": "This role is not permitted to access this part of the site"
         }
@@ -162,6 +184,12 @@ def view_evevnt():
     role = request.cookies.get("role")
     events_collection = db["events"]
     events_collection_list = [event for event in events_collection.find({})][::-1]
+    # Below line returns only future events
+    # events_collection_list = [event for event in events_collection.find({
+    #     "date": {
+    #         "$gt": datetime.now()
+    #     }
+    # })][::-1]
     return render_template("view_events.html", events=events_collection_list, role=role)
 
 @app.route("/edit-event", methods=["GET", "POST"])
@@ -175,43 +203,58 @@ def edit_event():
                 "event_id": event_id
             }
         )
-        if request.method == "POST":
-            poster = request.files.get("poster")
-            event_name = request.form.get("name")
-            poster_file_path = os.path.join(poster_directory, secure_filename(event_name + "." + poster.filename.split(".")[-1]))
-            poster.save(os.path.join("static", "images", event_name + "." + poster.filename.split(".")[-1]))
-            try:
-                print(f"--> OCR output: {ocr_from_image(poster_file_path)}")
-            except:
-                print("--> OCR failed")
-            event_date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
-            event_time = datetime.strptime(request.form.get("time"), "%H:%M")
-            event_venue = request.form.get("venue")
-            event_limit = int(request.form.get("limit"))
-            events_collection.update_one(
-                {
-                    "event_id": event_id
-                },
-                {
-                    "$set": {
-                        "event_id": int(list(events_collection.find({}))[-1]["event_id"]) + 1,
-                        "poster": event_name + "." + poster.filename.split(".")[-1],
-                        "name": event_name,
-                        "date": event_date,
-                        "time": event_time,
-                        "venue": event_venue,
-                        "limit": event_limit
-                    }
+        if event:
+            if request.method == "POST":
+                poster = request.files.get("poster")
+                event_name = request.form.get("name")
+                event_date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+                event_venue = request.form.get("venue")
+                event_limit = int(request.form.get("limit"))
+                if poster.filename != "":
+                    poster_file_path = os.path.join(poster_directory, secure_filename(event_name + "." + poster.filename.split(".")[-1]))
+                    poster.save(poster_file_path)
+                    events_collection.update_one(
+                        {
+                            "event_id": event_id
+                        },
+                        {
+                            "$set": {
+                                "event_id": int(list(events_collection.find({}))[-1]["event_id"]) + 1,
+                                "poster": event_name + "." + poster.filename.split(".")[-1],
+                                "name": event_name,
+                                "date": event_date,
+                                "venue": event_venue,
+                                "limit": event_limit
+                            }
+                        }
+                    )
+                else:
+                    events_collection.update_one(
+                        {
+                            "event_id": event_id
+                        },
+                        {
+                            "$set": {
+                                "event_id": int(list(events_collection.find({}))[-1]["event_id"]) + 1,
+                                "name": event_name,
+                                "date": event_date,
+                                "venue": event_venue,
+                                "limit": event_limit
+                            }
+                        }
+                    )
+                message = {
+                    "color": "green-text",
+                    "title": "Success",
+                    "body": "You have successfully edited the event"
                 }
-            )
-            message = {
-                "title": "Success",
-                "body": "You have successfully edited the event"
-            }
-            return render_template("information.html", message=message)
-        return render_template("edit_event.html", event=event)
+                return render_template("information.html", message=message)
+            return render_template("edit_event.html", event=event)
+        else:
+            return redirect("/404-raise-error") # Non existant route to raise 404 error
     else:
         message = {
+            "color": "red",
             "title": "Access denied",
             "body": "This role is not permitted to access this part of the site"
         }
@@ -229,12 +272,14 @@ def delete_event():
             }
         )
         message = {
+            "color": "green-text",
             "title": "Success",
             "body": "You have successfully deleted the event"
         }
         return render_template("information.html", message=message)
     else:
         message = {
+            "color": "red",
             "title": "Access denied",
             "body": "This role is not permitted to access this part of the site"
         }
@@ -273,6 +318,7 @@ def register():
                 for registration in registrations:
                     if registration["regno"] == regno:
                         message = {
+                            "color": "red",
                             "title": "Already registered",
                             "body": "This register number has already registered for the event"
                         }
@@ -292,6 +338,7 @@ def register():
                 )
                 mail_otp(name, email, event)
                 message = {
+                    "color": "green-text",
                     "title": "Success",
                     "body": "You have successfully registered to this event"
                 }
@@ -299,12 +346,14 @@ def register():
             return render_template("register.html", event_id=event_id)
         else:
             message = {
+                "color": "red",
                 "title": "No more seats available",
-                "body": "Looks like the event got filled out pretty fast"
+                "body": "Looks like the event got filled out pretty fast :("
             }
             return render_template("information.html", message=message)
     else:
         message = {
+            "color": "red",
             "title": "Access denied",
             "body": "This role is not permitted to access this part of the site"
         }
@@ -325,17 +374,19 @@ def export():
             event_name = event["name"]
             registrations = event["registrations"]
             df = pd.DataFrame(registrations)
-            df.to_excel(f"static/exports/{event_id}_{event_name}.xlsx", index=False)
+            df.to_excel(f"exports/{event_id}_{event_name}.xlsx", index=False)
             message = {
-                "title": "Access denied",
-                "body": "This role is not permitted to access this part of the site",
-                "file": f"static/exports/{event_id}_{event_name}.xlsx"
+                "color": "green-text",
+                "title": "Ready to download",
+                "body": f"Download {event_name}.xlsx by clicking the button below",
+                "file": f"exports/{event_id}_{event_name}.xlsx"
             }
             return render_template("information.html", message=message)
         else:
             return redirect("/404-raise-error") # Non existant route to raise 404 error
     else:
         message = {
+            "color": "red",
             "title": "Access denied",
             "body": "This role is not permitted to access this part of the site"
         }
@@ -350,6 +401,7 @@ def logout():
 @app.errorhandler(404)
 def page_not_found(e):
     message = {
+        "color": "red",
         "title": "404",
         "body": "The page you are looking for does not exist"
     }

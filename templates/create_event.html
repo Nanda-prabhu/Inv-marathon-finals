@@ -23,16 +23,16 @@
       <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="#">About</a>
+            <a class="nav-link" href="/about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/view-events">View event</a> 
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/logout">Logout</a>  
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
           </li>
         </ul>
       </div>
@@ -45,12 +45,12 @@
     <div class="event-div">
         <h1>New Event :</h1>
         <form action="" method="post" enctype="multipart/form-data">
-            <input class="form-control rounded-left" type="file" onchange="document.getElementById('blah').src = window.URL.createObjectURL(this.files[0])" name="poster">
-            <input class="form-control rounded-left" type="text" placeholder="Event name" name="name">
-            <input class="form-control rounded-left" type="date" placeholder="Event date" name="date">
-            <input class="form-control rounded-left" type="time" name="time">
-            <input class="form-control rounded-left" type="text" value="venue" placeholder="venue" name="venue">
-            <input class="form-control rounded-left" type="number" placeholder="Limit" name="limit">
+            <input class="form-control rounded-left" type="file" onchange="document.getElementById('blah').src = window.URL.createObjectURL(this.files[0])" name="poster" required>
+            <input class="form-control rounded-left" type="text" placeholder="Event name" name="name" required>
+            <!-- <input class="form-control rounded-left" type="date" placeholder="Event date" name="date"> -->
+            <!-- <input class="form-control rounded-left" type="time" name="time"> -->
+            <input class="form-control rounded-left" type="text" placeholder="Venue" name="venue" required>
+            <input class="form-control rounded-left" type="number" placeholder="Limit" name="limit" required>
             <br>
             <input type="submit" value="Add event">
         </form>

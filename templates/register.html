@@ -23,16 +23,16 @@
       <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="#">About</a>
+            <a class="nav-link" href="/about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/view-events">View event</a> 
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/logout">Logout</a>  
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
           </li>
         </ul>
       </div>
@@ -45,18 +45,18 @@
     <div class="event-div">
         <h1>Register: {{ event_name }}</h1>
         <form action="" method="post">
-            <input class="form-control rounded-left" type="number" placeholder="Register no." name="regno">
-            <input class="form-control rounded-left" type="text" placeholder="Name" name="name">
-            <input class="form-control rounded-left" type="email" placeholder="Mail id" name="email">
-            <input class="form-control rounded-left" type="text" placeholder="Department" name="dept">
-            <select style="margin-top: 0; background-color:#fff; border: 1px solid #ced4da; border-radius: 3px;"  name="year" id="cars">
+            <input class="form-control rounded-left" type="number" placeholder="Register no." name="regno" required>
+            <input class="form-control rounded-left" type="text" placeholder="Name" name="name" required>
+            <input class="form-control rounded-left" type="email" placeholder="Mail id" name="email" required>
+            <input class="form-control rounded-left" type="text" placeholder="Department" name="dept" required>
+            <select style="margin-top: 0; background-color:#fff; border: 1px solid #ced4da; border-radius: 3px;"  name="year" id="cars" required>
                 <option value="volvo">1st year</option>
                 <option value="saab">2nd year</option>
                 <option value="opel">3rd year</option>
                 <option value="audi">4th year</option>
               </select>
-            <input class="form-control rounded-left" type="text" placeholder="Section" name="section">
-            <input class="form-control rounded-left" type="number" placeholder="Mobile no." name="phone">
+            <input class="form-control rounded-left" type="text" placeholder="Section" name="section" required>
+            <input class="form-control rounded-left" type="number" placeholder="Mobile no." name="phone" required>
 
             
 

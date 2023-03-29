@@ -26,10 +26,13 @@
             <a class="nav-link" href="/about">About</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Sign up</a> 
+            <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/contact">Contact</a>
+            <a class="nav-link" href="/view-events">View event</a> 
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/logout">Logout</a>  
           </li>
         </ul>
       </div>
@@ -38,36 +41,11 @@
   </nav>
 
 
-  <section class="login">
-    <hr>
-    <div class="form-group login-content">
-
-      <!-- <img src="/images/sathyabama-univ.png" alt="" width="290" height="75"> -->
-      <br>
-      <!-- {{ msg }} -->
-      {% if message == "" %}
-      <div style="background-color: rgb(172, 201, 255); padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; display: None;">
-        <p style="margin-bottom: 0;">{{ message }}</p>
+  <section class="access-denied">
+    <div class="access-denied-div">
+        <h1 style="color: gray;">Contact</h1>
+        <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Adipisci incidunt commodi aliquid doloribus distinctio pariatur molestiae voluptatum ullam repellendus, consequatur doloremque repudiandae enim? Ut aliquid aspernatur excepturi quae delectus fugit!</p>
       </div>
-      {% else %}
-      <div style="background-color: rgb(172, 201, 255); padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center;">
-        <p style="margin-bottom: 0;">{{ message }}</p>
-      </div>
-      {% endif %}
-
-      <form action="" method="post">
-        <select name="role">
-          <option value="student">Student</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        <input type="text" class="form-control rounded-left" placeholder="Username" name="username" required>
-        <input type="password" class="form-control rounded-left" placeholder="Password" name="password" required>
-        <!-- <button type="button" class="btn btn-primary">Login</button> -->
-        <input type="submit" class="btn btn-primary" value="Submit">
-      </form>
-
-    </div>
   </section>
 
   

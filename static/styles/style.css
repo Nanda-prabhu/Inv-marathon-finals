@@ -388,3 +388,7 @@ input[type=submit]:active    {
 .card hr {
     margin: 8px 0 8px 0;
 }
+
+.green-text {
+    color: green !important;
+}

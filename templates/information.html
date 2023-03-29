@@ -23,16 +23,16 @@
       <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="#">About</a>
+            <a class="nav-link" href="/about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/view-events">View event</a> 
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/logout">Logout</a>  
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
           </li>
         </ul>
       </div>
@@ -43,13 +43,16 @@
 
   <section class="access-denied">
     <div class="access-denied-div">
-        <h1>{{ message['title'] }}</h1>
+        <h1 class="{{ message['color'] }}">{{ message['title'] }}</h1>
         <p>{{ message['body'] }}</p>
         {% if message['file'] %}
           <a href="{{ message['file'] }}" download="{{ message['file'] }}" style="margin-bottom: 10px;">
             <button class="bruv-btn">Click to download</button>
           </a>
-          <br><br>
+        {% elif message['edit_event'] %}
+          <a href="/edit-event?event_id={{ message['edit_event'] }}" style="margin-bottom: 10px;">
+            <button class="bruv-btn">Edit event</button>
+          </a>
         {% endif %}
         <a href="/view-events">
           <button class="bruv-btn">View events</button>
